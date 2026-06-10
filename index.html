@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>张紫涵 — 个人主页</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --accent: #C4A24D;
+            --accent-light: #F5EDD6;
+            --accent-hover: #A8872E;
+            --text: #1A1A1A;
+            --text-secondary: #555555;
+            --text-tertiary: #888888;
+            --border: #E5E5E5;
+            --bg: #FFFFFF;
+            --bg-subtle: #FAFAFA;
+        }
+
+        html { font-size: 16px; }
+
+        body {
+            font-family: 'Inter', 'Noto Serif SC', -apple-system, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+        /* ── Container ── */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ── Nav ── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            transition: box-shadow 0.3s ease;
+        }
+        nav.scrolled { box-shadow: 0 1px 8px rgba(0,0,0,0.04); }
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 56px;
+        }
+        nav .logo {
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            text-decoration: none;
+        }
+        nav .logo span { color: var(--accent); }
+        nav .nav-links { display: flex; gap: 28px; }
+        nav .nav-links a {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            text-decoration: none;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: color 0.2s;
+        }
+        nav .nav-links a:hover { color: var(--text); }
+
+        /* ── Hero ── */
+        .hero {
+            padding: 140px 0 80px;
+            border-bottom: 1px solid var(--border);
+        }
+        .hero h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: clamp(2.4rem, 6vw, 3.6rem);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 20px;
+        }
+        .hero h1 .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-left: 4px;
+            vertical-align: middle;
+            position: relative;
+            top: -2px;
+        }
+        .hero .tagline {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            max-width: 520px;
+            font-weight: 300;
+        }
+        .hero .tagline strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+        .hero .contact-row {
+            margin-top: 32px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+        }
+        .hero .contact-row a {
+            color: var(--text-tertiary);
+            text-decoration: none;
+            transition: color 0.2s;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1px;
+        }
+        .hero .contact-row a:hover { color: var(--accent-hover); border-color: var(--accent); }
+
+        /* ── Section ── */
+        section { padding: 72px 0; }
+        section + section { border-top: 1px solid var(--border); }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 32px;
+        }
+
+        /* ── Education ── */
+        .edu-item { margin-bottom: 36px; }
+        .edu-item:last-child { margin-bottom: 0; }
+        .edu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .edu-school {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .edu-school .tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--accent-hover);
+            background: var(--accent-light);
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 8px;
+            vertical-align: middle;
+            letter-spacing: 0.02em;
+        }
+        .edu-date {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+        .edu-major {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .edu-major .direction {
+            font-size: 0.82rem;
+            color: var(--text-tertiary);
+        }
+        .edu-awards {
+            font-size: 0.82rem;
+            color: var(--text-tertiary);
+            line-height: 1.8;
+        }
+
+        /* ── Skills ── */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px 40px;
+        }
+        @media (max-width: 560px) {
+            .skills-grid { grid-template-columns: 1fr; }
+        }
+        .skill-group h3 {
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        .skill-group p {
+            font-size: 0.82rem;
+            color: var(--text-tertiary);
+            line-height: 1.8;
+        }
+
+        /* ── Projects ── */
+        .project { margin-bottom: 56px; }
+        .project:last-child { margin-bottom: 0; }
+
+        .project-header {
+            margin-bottom: 16px;
+        }
+        .project-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+        .project-meta {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+        }
+        .project-meta .role {
+            color: var(--accent-hover);
+            font-weight: 500;
+        }
+
+        .project-section { margin-bottom: 20px; }
+        .project-section:last-child { margin-bottom: 0; }
+        .project-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .project-section p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .tech-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 16px;
+        }
+        .tech-tag {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            padding: 3px 10px;
+            border-radius: 3px;
+            letter-spacing: 0.01em;
+        }
+
+        .result-box {
+            background: var(--bg-subtle);
+            border-left: 3px solid var(--accent);
+            padding: 16px 20px;
+            border-radius: 0 4px 4px 0;
+            margin-top: 16px;
+        }
+        .result-box p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .detail-list {
+            list-style: none;
+            padding: 0;
+        }
+        .detail-list li {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            padding-left: 16px;
+            position: relative;
+            margin-bottom: 6px;
+        }
+        .detail-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 5px;
+            height: 5px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        /* ── About ── */
+        .about-content p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.9;
+            margin-bottom: 12px;
+        }
+        .about-content p:last-child { margin-bottom: 0; }
+
+        /* ── Footer ── */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        footer p {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+        footer .back-top {
+            display: inline-block;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-decoration: none;
+            margin-top: 8px;
+            transition: color 0.2s;
+        }
+        footer .back-top:hover { color: var(--accent-hover); }
+
+        /* ── Animations ── */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── Mobile nav ── */
+        @media (max-width: 560px) {
+            nav .nav-links { gap: 18px; }
+            nav .nav-links a { font-size: 0.7rem; }
+            .hero { padding: 120px 0 60px; }
+            section { padding: 56px 0; }
+            .project { margin-bottom: 44px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav id="nav">
+    <div class="container">
+        <a href="#" class="logo">张紫涵<span>.</span></a>
+        <div class="nav-links">
+            <a href="#education">教育</a>
+            <a href="#projects">项目</a>
+            <a href="#skills">技能</a>
+            <a href="#about">关于</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<header class="hero" id="top">
+    <div class="container">
+        <h1>张紫涵<span class="dot"></span></h1>
+        <p class="tagline">
+            电子科技大学 生物医学工程硕士，专注于<strong>脑影像信号处理</strong>与<strong>大模型应用开发</strong>。<br>
+            致力于将 AI Agent、RAG 检索增强等技术落地于脑科学研究场景。
+        </p>
+        <div class="contact-row">
+            <span>18780842195</span>
+            <a href="mailto:zh_zihan@qq.com">zh_zihan@qq.com</a>
+            <span>成都 · 电子科技大学清水河校区</span>
+        </div>
+    </div>
+</header>
+
+<!-- Education -->
+<section id="education">
+    <div class="container">
+        <div class="section-label fade-in">教育背景</div>
+
+        <div class="edu-item fade-in">
+            <div class="edu-header">
+                <div class="edu-school">电子科技大学<span class="tag">985 · 211</span></div>
+                <div class="edu-date">2024.09 — 至今</div>
+            </div>
+            <div class="edu-major">生物医学工程（硕士）<span class="direction"> / 研究方向：脑影像信号处理及分析</span></div>
+            <div class="edu-awards">校学业奖学金（2024、2025）· 四川省大学生生物医学工程创新设计大赛（2026）</div>
+        </div>
+
+        <div class="edu-item fade-in">
+            <div class="edu-header">
+                <div class="edu-school">南京信息工程大学<span class="tag">双一流</span></div>
+                <div class="edu-date">2020.09 — 2024.06</div>
+            </div>
+            <div class="edu-major">人工智能（学士）<span class="direction"> / 研究方向：脑认知情感分析</span></div>
+            <div class="edu-awards">机器人开发者大赛二等奖（2022）· 互联网+创新创业大赛（2022）· 蓝桥杯江苏赛区 Python 程序设计大赛（2022）</div>
+        </div>
+    </div>
+</section>
+
+<!-- Projects -->
+<section id="projects">
+    <div class="container">
+        <div class="section-label fade-in">项目经历</div>
+
+        <!-- Project 1 -->
+        <div class="project fade-in">
+            <div class="project-header">
+                <div class="project-title">脑科学研究方案生成与证据分析智能体</div>
+                <div class="project-meta"><span class="role">项目负责人</span> &nbsp;·&nbsp; 2025.11 — 2026.01</div>
+            </div>
+
+            <div class="project-section">
+                <div class="project-section-title">背景</div>
+                <p>面向脑科学科研场景，研究人员在课题设计、方法路线选择和阶段性报告撰写中，需要整合论文、技术文档、实验记录和项目材料。传统 RAG 多停留在单轮问答，难以支撑复杂科研任务拆解、证据审计和结构化报告生成。</p>
+            </div>
+
+            <div class="project-section">
+                <div class="project-section-title">技术方案</div>
+                <ul class="detail-list">
+                    <li>基于 LangGraph 构建 7 节点多 Agent 工作流，覆盖意图路由、研究规划、Web 检索、本地 RAG 检索、证据裁判、分析归纳和报告生成</li>
+                    <li>设计 Web Search + Local RAG 双通道检索机制，融合外部公开资料与本地项目文档，提升科研问题的证据覆盖度</li>
+                    <li>实现 Evidence Judge 证据裁判模块，对检索证据进行去重、可信度评分、冲突审计和引用来源校验，降低大模型生成中的证据幻觉</li>
+                    <li>设计 Reflect 补充研究机制，当系统识别到研究背景不足、方法对照不完整或证据支撑不足时，自动生成补充检索 query 并进入下一轮检索</li>
+                    <li>基于 FastAPI 封装后端服务，提供同步调用接口与 SSE 流式推送接口，实时返回任务阶段、检索进度、证据审计结果和最终 Markdown 报告</li>
+                </ul>
+            </div>
+
+            <div class="result-box">
+                <p>系统实现了从脑科学研究问题输入到研究方案/证据分析报告生成的自动化链路，可辅助完成课题调研、方法路线比较、实验方案整理和项目材料沉淀，提升复杂科研任务的推进效率与结果可追溯性。</p>
+            </div>
+
+            <div class="tech-list">
+                <span class="tech-tag">LangGraph</span>
+                <span class="tech-tag">Multi-Agent</span>
+                <span class="tech-tag">RAG</span>
+                <span class="tech-tag">FastAPI</span>
+                <span class="tech-tag">SSE</span>
+                <span class="tech-tag">Evidence Judge</span>
+            </div>
+        </div>
+
+        <!-- Project 2 -->
+        <div class="project fade-in">
+            <div class="project-header">
+                <div class="project-title">精神疾病研究智能知识检索系统</div>
+                <div class="project-meta"><span class="role">项目负责人</span> &nbsp;·&nbsp; 2026.02 — 2026.04</div>
+            </div>
+
+            <div class="project-section">
+                <div class="project-section-title">背景</div>
+                <p>面向精神疾病科研团队的文献综述、诊断依据查阅和治疗方案对比场景，科研资料分散于论文数据库、临床指南、药物说明书和临床试验文档。传统关键词检索难以理解"抗抑郁药耐药性/难治性抑郁"等语义近义表达，导致文献遗漏率高、检索效率低。</p>
+            </div>
+
+            <div class="project-section">
+                <div class="project-section-title">技术方案</div>
+                <ul class="detail-list">
+                    <li>设计 Hybrid Search 混合检索引擎，融合 BM25 稀疏检索与 Dense Embedding 稠密检索，基于 RRF 算法合并双路召回结果，提升精神医学术语近义表达下的召回能力</li>
+                    <li>引入 Cross-Encoder Rerank 精排模块，对候选论文、临床指南和药物条目进行二次相关性排序，并设计精排失败回退机制，保障检索链路稳定性</li>
+                    <li>基于 MCP 协议实现知识检索 Server，封装标准化 Tool，支持 Claude Desktop 等 AI Agent 直接调用私有科研知识库</li>
+                    <li>设计 Load → Split → Transform → Embed → Upsert 数据摄取流水线，结合 LLM 完成 Chunk 重组、元数据标注和论文结构信息保留，通过 YAML 配置支持 RAG 组件热切换</li>
+                    <li>建立 Ragas + Hit Rate / MRR 自动化评估闭环，构建 Golden Test Set 回归测试集，为检索策略优化提供量化依据</li>
+                </ul>
+            </div>
+
+            <div class="result-box">
+                <p>系统支持 500+ 篇精神疾病相关文献与指南的语义检索，Hit Rate@10 达 92%，端到端查询延迟控制在 800ms 以内，支撑科研人员和 AI Agent 双通道知识查询。</p>
+            </div>
+
+            <div class="tech-list">
+                <span class="tech-tag">Hybrid Search</span>
+                <span class="tech-tag">BM25</span>
+                <span class="tech-tag">Dense Embedding</span>
+                <span class="tech-tag">Cross-Encoder Rerank</span>
+                <span class="tech-tag">MCP</span>
+                <span class="tech-tag">Ragas</span>
+                <span class="tech-tag">Qdrant</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Skills -->
+<section id="skills">
+    <div class="container">
+        <div class="section-label fade-in">专业技能</div>
+        <div class="skills-grid">
+            <div class="skill-group fade-in">
+                <h3>Agent 开发</h3>
+                <p>LangChain / LangGraph 框架；ReAct、Plan-and-Execute 设计范式；MCP Tools 开发与集成</p>
+            </div>
+            <div class="skill-group fade-in">
+                <h3>RAG 与检索</h3>
+                <p>RAG 落地经验；Qdrant 向量数据库；Hybrid Search；Rerank；Ragas 评估</p>
+            </div>
+            <div class="skill-group fade-in">
+                <h3>大模型应用</h3>
+                <p>主流大模型 API 调用与 Prompt 工程；Claude Code / Codex / Cursor 等 AI 工具</p>
+            </div>
+            <div class="skill-group fade-in">
+                <h3>工程与协作</h3>
+                <p>Git 版本控制与多人协作；FastAPI 后端开发；良好的工程化意识</p>
+            </div>
+            <div class="skill-group fade-in">
+                <h3>语言能力</h3>
+                <p>CET6 557 分，良好的英文技术文档与论文阅读能力</p>
+            </div>
+            <div class="skill-group fade-in">
+                <h3>软技能</h3>
+                <p>学习能力强；善于结构化拆解复杂问题；注重团队协作与沟通</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About -->
+<section id="about">
+    <div class="container">
+        <div class="section-label fade-in">自我评价</div>
+        <div class="about-content fade-in">
+            <p>对大模型应用开发保持持续热情，善于快速理解新技术，并在项目实践中完成从需求拆解、方案设计到工程落地的闭环。擅长将复杂业务问题结构化拆解。</p>
+            <p>注重团队合作与沟通协作，具备较强责任心和执行力，能够在多角色协作中推动问题解决。</p>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p>© 2026 张紫涵</p>
+        <a href="#top" class="back-top">↑ 回到顶部</a>
+    </div>
+</footer>
+
+<script>
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // Fade in on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
