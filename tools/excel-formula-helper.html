@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Formula Helper — 公式生成助手</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background:#f0f2f5; color:#333; min-height:100vh; }
+.header { background: linear-gradient(135deg, #217346 0%, #0d5c2e 100%); color:#fff; padding:24px 32px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.header h1 { font-size:24px; font-weight:600; }
+.header p { font-size:14px; opacity:.85; margin-top:4px; }
+.header .nav-back { display:inline-block; margin-top:10px; color:rgba(255,255,255,.8); font-size:13px; text-decoration:none; }
+.header .nav-back:hover { color:#fff; }
+.container { max-width:960px; margin:0 auto; padding:24px; }
+
+/* Scene Cards */
+.scene-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; margin-bottom:24px; }
+.scene-card { background:#fff; border:2px solid #e8eaed; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:all .2s; }
+.scene-card:hover { border-color:#b7d7c0; background:#f6faf7; }
+.scene-card.active { border-color:#217346; background:#e8f5e9; }
+.scene-card .icon { font-size:28px; margin-bottom:8px; }
+.scene-card .label { font-size:13px; font-weight:500; color:#333; }
+
+/* Main layout */
+.main-layout { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+@media (max-width:760px) { .main-layout { grid-template-columns:1fr; } }
+.card { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:24px; }
+.card h3 { font-size:15px; font-weight:600; margin-bottom:16px; color:#217346; display:flex; align-items:center; gap:8px; }
+
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:13px; font-weight:500; margin-bottom:4px; color:#555; }
+.form-group input, .form-group select, .form-group textarea { width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; font-family: "Cascadia Code", Consolas, monospace; transition:border-color .2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline:none; border-color:#217346; box-shadow:0 0 0 3px rgba(33,115,70,.12); }
+.form-group select { font-family: inherit; }
+.form-group textarea { resize:vertical; min-height:70px; }
+.form-group .hint { font-size:11px; color:#999; margin-top:3px; }
+.form-row { display:flex; gap:12px; }
+.form-row .form-group { flex:1; }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:12px 24px; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; transition:all .2s; }
+.btn-primary { background:#217346; color:#fff; width:100%; }
+.btn-primary:hover { background:#185a32; }
+.btn-outline { background:#fff; color:#217346; border:1px solid #217346; }
+.btn-outline:hover { background:#e8f5e9; }
+.btn:disabled { opacity:.5; cursor:not-allowed; pointer-events:none; }
+
+.result-area { margin-top:16px; }
+.result-box { background:#f8f9fa; border:1px solid #e8eaed; border-radius:8px; padding:16px; font-family:"Cascadia Code",Consolas,monospace; font-size:15px; word-break:break-all; min-height:48px; display:flex; align-items:center; color:#1a1a1a; }
+.result-box.empty { color:#bbb; font-family:inherit; font-size:14px; justify-content:center; }
+.copy-bar { display:flex; gap:8px; margin-top:10px; }
+.copy-bar .btn { flex:1; padding:10px; font-size:13px; }
+.copied-toast { position:fixed; top:24px; right:24px; background:#217346; color:#fff; padding:12px 24px; border-radius:8px; font-size:14px; font-weight:500; opacity:0; transform:translateY(-10px); transition:all .3s; pointer-events:none; z-index:999; }
+.copied-toast.show { opacity:1; transform:translateY(0); }
+
+.example-box { background:#fffbe6; border:1px solid #ffe082; border-radius:8px; padding:12px 16px; margin-top:12px; font-size:12px; color:#8d6e00; line-height:1.8; }
+.example-box strong { color:#5d4037; }
+
+.template-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.template-tag { background:#e8f5e9; color:#217346; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-family:"Cascadia Code",Consolas,monospace; transition:all .2s; border:1px solid transparent; }
+.template-tag:hover { border-color:#217346; background:#c8e6c9; }
+
+.history-list { max-height:200px; overflow-y:auto; }
+.history-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid #f0f0f0; font-size:13px; font-family:"Cascadia Code",Consolas,monospace; }
+.history-item .copy-btn { color:#217346; cursor:pointer; background:none; border:1px solid #b7d7c0; padding:4px 10px; border-radius:4px; font-size:11px; }
+.history-item .copy-btn:hover { background:#e8f5e9; }
+.history-item .scene-badge { font-size:10px; color:#666; background:#f0f0f0; padding:2px 6px; border-radius:4px; margin-left:8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 Excel Formula Helper</h1>
+  <p>公式生成助手 — 选择场景、填写参数，一键生成 Excel 公式</p>
+  <a href="index.html" class="nav-back">← 返回 DataClean Mini</a>
+</div>
+
+<div class="container">
+
+  <!-- Scene Selection -->
+  <div class="scene-grid" id="sceneGrid">
+    <div class="scene-card active" data-scene="vlookup">
+      <div class="icon">🔗</div><div class="label">跨表字段匹配</div>
+    </div>
+    <div class="scene-card" data-scene="duplicate">
+      <div class="icon">🔁</div><div class="label">重复值检查</div>
+    </div>
+    <div class="scene-card" data-scene="missing">
+      <div class="icon">🔍</div><div class="label">缺失值标记</div>
+    </div>
+    <div class="scene-card" data-scene="conditional">
+      <div class="icon">🏷️</div><div class="label">条件分类</div>
+    </div>
+    <div class="scene-card" data-scene="text">
+      <div class="icon">📝</div><div class="label">文本清洗</div>
+    </div>
+    <div class="scene-card" data-scene="date">
+      <div class="icon">📅</div><div class="label">日期处理</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Left: Parameters -->
+    <div class="card">
+      <h3>⚙️ 参数配置</h3>
+      <div id="paramFields"></div>
+      <button class="btn btn-primary" id="btnGenerate">✨ 生成公式</button>
+
+      <!-- Quick templates -->
+      <div class="template-tags" id="quickTemplates"></div>
+    </div>
+
+    <!-- Right: Result -->
+    <div class="card">
+      <h3>📋 生成结果</h3>
+      <div class="result-box empty" id="resultBox">请选择场景并填写参数</div>
+      <div class="copy-bar">
+        <button class="btn btn-outline" id="btnCopy" disabled>📋 复制公式</button>
+        <button class="btn btn-outline" id="btnCopyWithEquals" disabled>📋 复制含 = 号</button>
+      </div>
+      <div class="example-box" id="exampleBox"></div>
+
+      <h3 style="margin-top:20px;">🕐 历史记录</h3>
+      <div class="history-list" id="historyList">
+        <div style="text-align:center;color:#aaa;padding:20px;font-size:13px;">暂无记录</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="copied-toast" id="toast">✅ 公式已复制到剪贴板</div>
+
+<script>
+// ==================== State ====================
+let currentScene = 'vlookup';
+let currentFormula = '';
+let history = [];
+
+// ==================== Scene Config ====================
+const sceneConfig = {
+  vlookup: {
+    label: '跨表字段匹配',
+    icon: '🔗',
+    params: [
+      { id:'lookupValue', label:'查找值单元格', placeholder:'A2', hint:'包含要查找的主键的单元格，如 A2', default:'A2' },
+      { id:'tableArray', label:'查找区域', placeholder:'Sheet2!A:C', hint:'在另一张表中的查找范围，如 Sheet2!A:C', default:'Sheet2!A:C' },
+      { id:'colIndex', label:'返回列序号', placeholder:'2', hint:'查找区域中要返回第几列的值', default:'2' },
+      { id:'matchType', label:'匹配模式', type:'select', options:[
+        {v:'FALSE',l:'精确匹配 (FALSE / 0)'},
+        {v:'TRUE',l:'近似匹配 (TRUE / 1)'},
+        {v:'0',l:'精确匹配 (推荐写法 0)'}
+      ], default:'FALSE' },
+      { id:'useXlookup', label:'使用 XLOOKUP (Excel 365+)', type:'select', options:[
+        {v:'vlookup',l:'VLOOKUP'},
+        {v:'xlookup',l:'XLOOKUP (更灵活)'}
+      ], default:'vlookup' }
+    ],
+    generate: (p) => {
+      if (p.useXlookup === 'xlookup') {
+        return `XLOOKUP(${p.lookupValue},${p.tableArray.split('!')[1]?.split(':')[0] || 'A:A'}:${p.tableArray.split('!')[1]?.split(':')[0]?.replace(/[A-Z]/g,'') || ''},${p.tableArray.split('!')[1]?.split(':')[1]?.replace(/\d/g,'') || 'B'}:${p.tableArray.split('!')[1]?.split(':')[1] || 'B:B'})`;
+      }
+      return `VLOOKUP(${p.lookupValue},${p.tableArray},${p.colIndex},${p.matchType})`;
+    },
+    example: `<strong>场景示例：</strong>Sheet1 的 A 列是 user_id，Sheet2 的 A:C 列包含 user_id / name / city，想要匹配用户所在城市。<br>
+<strong>公式说明：</strong>在 Sheet1 的某一列输入公式，根据 A2 的值去 Sheet2!A:C 中查找匹配行，返回第 3 列（city）。`,
+    templates: [
+      { label:'VLOOKUP 精确匹配', params:{lookupValue:'A2', tableArray:'Sheet2!A:C', colIndex:'2', matchType:'FALSE', useXlookup:'vlookup'} },
+      { label:'VLOOKUP 近似匹配', params:{lookupValue:'A2', tableArray:'Sheet2!A:B', colIndex:'2', matchType:'TRUE', useXlookup:'vlookup'} },
+      { label:'IFERROR 包装', formula:'IFERROR(VLOOKUP(A2,Sheet2!A:C,2,FALSE),"未找到")' },
+    ]
+  },
+
+  duplicate: {
+    label: '重复值检查',
+    icon: '🔁',
+    params: [
+      { id:'checkRange', label:'检查范围', placeholder:'A:A', hint:'要检查重复的列范围，如 A:A 或 A2:A100', default:'A:A' },
+      { id:'checkCell', label:'检查单元格', placeholder:'A2', hint:'当前行对应的单元格，如 A2', default:'A2' },
+      { id:'labelDup', label:'重复时显示', placeholder:'重复', default:'重复' },
+      { id:'labelUnique', label:'唯一时显示', placeholder:'唯一', default:'唯一' }
+    ],
+    generate: (p) => `IF(COUNTIF(${p.checkRange},${p.checkCell})>1,"${p.labelDup}","${p.labelUnique}")`,
+    example: `<strong>场景示例：</strong>检查 A 列的用户 ID 是否有重复。<br>
+<strong>公式说明：</strong>统计 A 列中当前单元格值出现的次数，>1 则标记"重复"，否则"唯一"。`,
+    templates: [
+      { label:'标记重复/唯一', params:{checkRange:'A:A', checkCell:'A2', labelDup:'重复', labelUnique:'唯一'} },
+      { label:'仅标记重复', params:{checkRange:'B:B', checkCell:'B2', labelDup:'重复', labelUnique:''} },
+      { label:'显示重复次数', formula:'IF(COUNTIF(A:A,A2)>1,COUNTIF(A:A,A2)&"次","")' },
+    ]
+  },
+
+  missing: {
+    label: '缺失值标记',
+    icon: '🔍',
+    params: [
+      { id:'checkCell', label:'检查单元格', placeholder:'B2', hint:'要检查是否为空的目标单元格', default:'B2' },
+      { id:'labelMissing', label:'缺失时显示', placeholder:'缺失', default:'缺失' },
+      { id:'labelOk', label:'正常时显示', placeholder:'正常', default:'正常' },
+      { id:'checkEmptyStr', label:'空字符串也视为缺失', type:'select', options:[
+        {v:'true',l:'是（=""也视为缺失）'},
+        {v:'false',l:'否（仅空白单元格）'}
+      ], default:'true' }
+    ],
+    generate: (p) => {
+      if (p.checkEmptyStr === 'true') {
+        return `IF(OR(${p.checkCell}="",${p.checkCell}=0,ISBLANK(${p.checkCell})),"${p.labelMissing}","${p.labelOk}")`;
+      }
+      return `IF(ISBLANK(${p.checkCell}),"${p.labelMissing}","${p.labelOk}")`;
+    },
+    example: `<strong>场景示例：</strong>检查 B2 单元格是否为空，对缺失数据进行标记。<br>
+<strong>公式说明：</strong>如果 B2 为空或空字符串则返回"缺失"，否则返回"正常"。`,
+    templates: [
+      { label:'标记缺失/正常', params:{checkCell:'B2', labelMissing:'缺失', labelOk:'正常'} },
+      { label:'多列任一为空', formula:'IF(OR(A2="",B2="",C2=""),"不完整","完整")' },
+      { label:'统计缺失数', formula:'COUNTBLANK(A2:Z2)&"列缺失"' },
+    ]
+  },
+
+  conditional: {
+    label: '条件分类',
+    icon: '🏷️',
+    params: [
+      { id:'checkCell', label:'判断单元格', placeholder:'B2', hint:'要判断的数值单元格，如分数列 B2', default:'B2' },
+      { id:'conditions', label:'分类条件（每行一个，格式: 条件=标签）', type:'textarea', placeholder:'>=90=优秀\n>=80=良好\n>=60=及格\n<60=不及格', default:'>=90=优秀\n>=80=良好\n>=60=及格\n<60=不及格', hint:'从上到下匹配，先匹配先生效' },
+      { id:'defaultLabel', label:'默认标签（都不匹配时）', placeholder:'未知', default:'未知' }
+    ],
+    generate: (p) => {
+      const lines = p.conditions.split('\n').filter(l => l.includes('='));
+      if (lines.length === 0) return 'IF(TRUE,"请填写条件")';
+      if (lines.length === 1) {
+        const [cond, label] = lines[0].split('=');
+        return `IF(${p.checkCell}${cond},"${label.trim()}","${p.defaultLabel}")`;
+      }
+      // Build nested IF
+      let formula = '';
+      for (let i = 0; i < lines.length; i++) {
+        const [cond, label] = lines[i].split('=');
+        if (i === 0) {
+          formula = `IF(${p.checkCell}${cond.trim()},"${label.trim()}",`;
+        } else if (i === lines.length - 1) {
+          formula += `IF(${p.checkCell}${cond.trim()},"${label.trim()}","${p.defaultLabel}")` + ')'.repeat(lines.length - 1);
+        } else {
+          formula += `IF(${p.checkCell}${cond.trim()},"${label.trim()}",`;
+        }
+      }
+      return formula;
+    },
+    example: `<strong>场景示例：</strong>根据 B2 的分数值，自动划分为"优秀/良好/及格/不及格"。<br>
+<strong>公式说明：</strong>嵌套 IF 从上到下判断，第一个满足的条件优先返回。Excel 2016+ 也可用 IFS。`,
+    templates: [
+      { label:'分数等级', params:{checkCell:'B2', conditions:'>=90=优秀\n>=80=良好\n>=60=及格\n<60=不及格', defaultLabel:'未知'} },
+      { label:'年龄段', params:{checkCell:'C2', conditions:'<18=未成年\n<35=青年\n<60=中年\n>=60=老年', defaultLabel:'未知'} },
+      { label:'金额分级', formula:'IFS(B2>=10000,"高",B2>=5000,"中",B2>0,"低",TRUE,"无")' },
+      { label:'两条件判断', formula:'IF(AND(A2>=60,B2>=60),"通过","不通过")' },
+    ]
+  },
+
+  text: {
+    label: '文本清洗',
+    icon: '📝',
+    params: [
+      { id:'textCell', label:'目标单元格', placeholder:'A2', hint:'要处理的文本所在单元格', default:'A2' },
+      { id:'operation', label:'清洗操作', type:'select', options:[
+        {v:'trim',l:'去除首尾空格 (TRIM)'},
+        {v:'substitute',l:'替换特定字符 (SUBSTITUTE)'},
+        {v:'left',l:'从左侧提取 N 个字符 (LEFT)'},
+        {v:'right',l:'从右侧提取 N 个字符 (RIGHT)'},
+        {v:'mid',l:'从中间提取 (MID)'},
+        {v:'upper',l:'全部转为大写 (UPPER)'},
+        {v:'lower',l:'全部转为小写 (LOWER)'},
+        {v:'concat',l:'拼接多列文本 (&)'},
+        {v:'clean',l:'清理特殊字符 (CLEAN + TRIM)'},
+      ], default:'trim' },
+      { id:'extraParam', label:'额外参数', placeholder:'根据操作填写: 旧字符,新字符 / 提取位数 / 起始位置,提取位数', hint:'SUBSTITUTE: 旧字符,新字符 | LEFT/RIGHT: 提取位数 | MID: 起始位置,提取位数 | 拼接: B2," ",C2' }
+    ],
+    generate: (p) => {
+      const extra = p.extraParam || '';
+      switch (p.operation) {
+        case 'trim': return `TRIM(${p.textCell})`;
+        case 'substitute': {
+          const parts = extra.split(',');
+          return `SUBSTITUTE(${p.textCell},"${(parts[0]||' ').trim()}","${(parts[1]||'').trim()}")`;
+        }
+        case 'left': return `LEFT(${p.textCell},${extra || '5'})`;
+        case 'right': return `RIGHT(${p.textCell},${extra || '5'})`;
+        case 'mid': {
+          const parts = extra.split(',');
+          return `MID(${p.textCell},${(parts[0]||'1').trim()},${(parts[1]||'5').trim()})`;
+        }
+        case 'upper': return `UPPER(${p.textCell})`;
+        case 'lower': return `LOWER(${p.textCell})`;
+        case 'concat': return extra ? `${p.textCell}&${extra}` : `${p.textCell}&""`;
+        case 'clean': return `TRIM(CLEAN(${p.textCell}))`;
+        default: return `TRIM(${p.textCell})`;
+      }
+    },
+    example: `<strong>场景示例：</strong>A2 单元格内容为 "  张三  "，需要去除前后空格。<br>
+<strong>常用操作：</strong>TRIM（去空格）、SUBSTITUTE（替换）、LEFT/RIGHT/MID（提取）、UPPER/LOWER（大小写）。`,
+    templates: [
+      { label:'去除空格', params:{textCell:'A2', operation:'trim', extraParam:''} },
+      { label:'替换换行符', params:{textCell:'A2', operation:'substitute', extraParam:'CHAR(10), '} },
+      { label:'提取前3位', params:{textCell:'A2', operation:'left', extraParam:'3'} },
+      { label:'提取身份证出生年', formula:'MID(A2,7,4)' },
+      { label:'拼接姓名', formula:'B2&" "&C2' },
+    ]
+  },
+
+  date: {
+    label: '日期处理',
+    icon: '📅',
+    params: [
+      { id:'dateCell', label:'日期单元格', placeholder:'A2', hint:'包含日期的单元格，如 A2', default:'A2' },
+      { id:'operation', label:'处理操作', type:'select', options:[
+        {v:'text',l:'日期格式化 (TEXT → YYYY-MM-DD)'},
+        {v:'year',l:'提取年份 (YEAR)'},
+        {v:'month',l:'提取月份 (MONTH)'},
+        {v:'day',l:'提取日 (DAY)'},
+        {v:'weekday',l:'星期几 (WEEKDAY / TEXT)'},
+        {v:'datedif',l:'日期差值 (DATEDIF)'},
+        {v:'edate',l:'月份加减 (EDATE)'},
+        {v:'now',l:'当前日期 (TODAY / NOW)'},
+      ], default:'text' },
+      { id:'extraParam', label:'额外参数', placeholder:'格式代码 / 结束日期 / 月数', hint:'TEXT: 格式如 yyyy-mm-dd | DATEDIF: 结束日期 | EDATE: 月数' }
+    ],
+    generate: (p) => {
+      const extra = p.extraParam || '';
+      switch (p.operation) {
+        case 'text': return `TEXT(${p.dateCell},"${extra || 'yyyy-mm-dd'}")`;
+        case 'year': return `YEAR(${p.dateCell})`;
+        case 'month': return `MONTH(${p.dateCell})`;
+        case 'day': return `DAY(${p.dateCell})`;
+        case 'weekday': return `TEXT(${p.dateCell},"dddd")`;
+        case 'datedif': {
+          const parts = extra.split(',');
+          return `DATEDIF(${p.dateCell},${(parts[0]||'TODAY()').trim()},"${(parts[1]||'Y').trim()}")`;
+        }
+        case 'edate': return `EDATE(${p.dateCell},${extra || '1'})`;
+        case 'now': return extra === 'time' ? 'NOW()' : 'TODAY()';
+        default: return `TEXT(${p.dateCell},"yyyy-mm-dd")`;
+      }
+    },
+    example: `<strong>场景示例：</strong>A2 是日期 "2024-01-15"，需要统一转为 "2024年01月" 格式。<br>
+<strong>常用操作：</strong>TEXT 格式化、YEAR/MONTH/DAY 提取、DATEDIF 计算年龄/工龄。`,
+    templates: [
+      { label:'标准日期格式', params:{dateCell:'A2', operation:'text', extraParam:'yyyy-mm-dd'} },
+      { label:'计算年龄', formula:'DATEDIF(A2,TODAY(),"Y")' },
+      { label:'计算工龄(年月)', formula:'DATEDIF(A2,TODAY(),"Y")&"年"&DATEDIF(A2,TODAY(),"YM")&"月"' },
+      { label:'中文星期', params:{dateCell:'A2', operation:'weekday', extraParam:''} },
+      { label:'当月第一天', formula:'DATE(YEAR(A2),MONTH(A2),1)' },
+    ]
+  }
+};
+
+// ==================== Init ====================
+let activeTemplateUsed = false;
+
+function init() {
+  document.querySelectorAll('.scene-card').forEach(card => {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+      currentScene = this.dataset.scene;
+      activeTemplateUsed = false;
+      renderParams();
+      renderTemplates();
+    });
+  });
+  renderParams();
+  renderTemplates();
+  updateExample();
+
+  $('#btnGenerate').addEventListener('click', generateFormula);
+  $('#btnCopy').addEventListener('click', () => copyFormula(false));
+  $('#btnCopyWithEquals').addEventListener('click', () => copyFormula(true));
+
+  // Regenerate on param change
+  document.getElementById('paramFields').addEventListener('input', () => {
+    activeTemplateUsed = false;
+  });
+  document.getElementById('paramFields').addEventListener('change', () => {
+    activeTemplateUsed = false;
+  });
+}
+
+function $(s) { return document.querySelector(s); }
+
+// ==================== Render Params ====================
+function renderParams() {
+  const cfg = sceneConfig[currentScene];
+  const container = $('#paramFields');
+  let html = '';
+
+  cfg.params.forEach(p => {
+    html += `<div class="form-group"><label>${p.label}</label>`;
+    if (p.type === 'select') {
+      html += `<select id="param_${p.id}">`;
+      p.options.forEach(o => {
+        const sel = o.v === p.default ? ' selected' : '';
+        html += `<option value="${escAttr(o.v)}"${sel}>${escHtml(o.l)}</option>`;
+      });
+      html += '</select>';
+    } else if (p.type === 'textarea') {
+      html += `<textarea id="param_${p.id}" placeholder="${escAttr(p.placeholder)}" rows="4">${escHtml(p.default)}</textarea>`;
+    } else {
+      html += `<input type="text" id="param_${p.id}" placeholder="${escAttr(p.placeholder)}" value="${escAttr(p.default)}">`;
+    }
+    if (p.hint) html += `<div class="hint">${p.hint}</div>`;
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+  updateExample();
+}
+
+function getParams() {
+  const cfg = sceneConfig[currentScene];
+  const params = {};
+  cfg.params.forEach(p => {
+    const el = document.getElementById('param_' + p.id);
+    if (!el) return;
+    params[p.id] = el.value;
+  });
+  return params;
+}
+
+// ==================== Quick Templates ====================
+function renderTemplates() {
+  const cfg = sceneConfig[currentScene];
+  const container = $('#quickTemplates');
+  if (!cfg.templates || !cfg.templates.length) { container.innerHTML = ''; return; }
+
+  let html = '<span style="font-size:12px;color:#999;">快捷模板：</span>';
+  cfg.templates.forEach((t, i) => {
+    html += `<span class="template-tag" data-idx="${i}">⚡ ${escHtml(t.label)}</span>`;
+  });
+  container.innerHTML = html;
+
+  container.querySelectorAll('.template-tag').forEach(tag => {
+    tag.addEventListener('click', function() {
+      const t = cfg.templates[parseInt(this.dataset.idx)];
+      if (t.params) {
+        Object.entries(t.params).forEach(([k, v]) => {
+          const el = document.getElementById('param_' + k);
+          if (el) el.value = v;
+        });
+        activeTemplateUsed = false;
+        generateFormula();
+      } else if (t.formula) {
+        currentFormula = t.formula;
+        activeTemplateUsed = true;
+        displayResult();
+      }
+    });
+  });
+}
+
+// ==================== Generate ====================
+function generateFormula() {
+  const cfg = sceneConfig[currentScene];
+  if (activeTemplateUsed) {
+    // formula already set by template, just display
+  } else {
+    const params = getParams();
+    currentFormula = cfg.generate(params);
+  }
+  displayResult();
+  updateExample();
+}
+
+function displayResult() {
+  const resultBox = $('#resultBox');
+  resultBox.textContent = '=' + currentFormula;
+  resultBox.classList.remove('empty');
+  $('#btnCopy').disabled = false;
+  $('#btnCopyWithEquals').disabled = false;
+
+  // Add to history
+  addHistory(currentFormula, currentScene);
+}
+
+function updateExample() {
+  const cfg = sceneConfig[currentScene];
+  $('#exampleBox').innerHTML = cfg.example || '';
+}
+
+// ==================== Copy ====================
+function copyFormula(withEquals) {
+  const text = withEquals ? ('=' + currentFormula) : currentFormula;
+  navigator.clipboard.writeText(text).then(() => showToast());
+}
+
+function showToast() {
+  const toast = $('#toast');
+  toast.classList.add('show');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+// ==================== History ====================
+function addHistory(formula, scene) {
+  const key = formula + '|' + scene;
+  history = history.filter(h => (h.formula + '|' + h.scene) !== key);
+  history.unshift({ formula, scene, time: new Date() });
+  if (history.length > 20) history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = $('#historyList');
+  if (!history.length) {
+    container.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:13px;">暂无记录</div>';
+    return;
+  }
+  container.innerHTML = history.map((h, i) => `
+    <div class="history-item">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">=${escHtml(h.formula)}<span class="scene-badge">${sceneConfig[h.scene]?.label||h.scene}</span></span>
+      <button class="copy-btn" data-idx="${i}">复制</button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const h = history[parseInt(this.dataset.idx)];
+      currentFormula = h.formula;
+      currentScene = h.scene;
+      document.querySelectorAll('.scene-card').forEach(c => c.classList.remove('active'));
+      const target = document.querySelector(`.scene-card[data-scene="${CSS.escape(h.scene)}"]`);
+      if (target) target.classList.add('active');
+      renderParams();
+      renderTemplates();
+      displayResult();
+      copyFormula(true);
+    });
+  });
+}
+
+// ==================== Helpers ====================
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function CSSescape(s) { return s.replace(/([!"#$%&'()*+,.\/:;<=>?@[\]^`{|}~])/g, '\\$1'); }
+
+// ==================== Start ====================
+init();
+</script>
+
+</body>
+</html>
