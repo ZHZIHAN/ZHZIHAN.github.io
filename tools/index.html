@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataClean Mini — 数据质检与清洗小助手</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background:#f0f2f5; color:#333; min-height:100vh; }
+.header { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color:#fff; padding:24px 32px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.header h1 { font-size:24px; font-weight:600; }
+.header p { font-size:14px; opacity:.85; margin-top:4px; }
+.container { max-width:1300px; margin:0 auto; padding:24px; display:grid; grid-template-columns:340px 1fr; gap:24px; }
+@media (max-width:900px) { .container { grid-template-columns:1fr; } }
+.card { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:20px; margin-bottom:16px; }
+.card h3 { font-size:15px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; gap:8px; color:#1a73e8; }
+.card h3 .icon { font-size:18px; }
+.form-group { margin-bottom:14px; }
+.form-group label { display:block; font-size:13px; font-weight:500; margin-bottom:4px; color:#555; }
+.form-group input, .form-group select, .form-group textarea { width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:13px; transition:border-color .2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline:none; border-color:#1a73e8; box-shadow:0 0 0 3px rgba(26,115,232,.12); }
+.form-group textarea { resize:vertical; min-height:60px; font-family:monospace; font-size:12px; }
+.form-row { display:flex; gap:8px; }
+.form-row .form-group { flex:1; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; transition:all .2s; }
+.btn-primary { background:#1a73e8; color:#fff; }
+.btn-primary:hover { background:#1557b0; }
+.btn-success { background:#0f9d58; color:#fff; }
+.btn-success:hover { background:#0b8043; }
+.btn-outline { background:#fff; color:#1a73e8; border:1px solid #1a73e8; }
+.btn-outline:hover { background:#e8f0fe; }
+.btn-sm { padding:6px 14px; font-size:12px; }
+.btn:disabled { opacity:.5; cursor:not-allowed; pointer-events:none; }
+.button-bar { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.tabs { display:flex; border-bottom:2px solid #e8eaed; margin-bottom:20px; }
+.tab { padding:10px 20px; font-size:14px; font-weight:500; color:#777; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; }
+.tab.active { color:#1a73e8; border-bottom-color:#1a73e8; }
+.tab:hover { color:#1a73e8; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px; margin-bottom:16px; }
+.stat-item { background:#f8f9fa; border-radius:10px; padding:14px; text-align:center; }
+.stat-value { font-size:22px; font-weight:700; color:#1a73e8; }
+.stat-label { font-size:12px; color:#888; margin-top:2px; }
+.stat-item.warn .stat-value { color:#e37400; }
+.stat-item.danger .stat-value { color:#d93025; }
+.stat-item.ok .stat-value { color:#0f9d58; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { background:#f8f9fa; padding:10px 12px; text-align:left; font-weight:600; border-bottom:2px solid #e8eaed; color:#555; white-space:nowrap; }
+td { padding:8px 12px; border-bottom:1px solid #f0f0f0; }
+tr:hover td { background:#f8f9fa; }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.badge-ok { background:#e6f4ea; color:#0f9d58; }
+.badge-warn { background:#fef7e0; color:#e37400; }
+.badge-danger { background:#fce8e6; color:#d93025; }
+.data-preview { max-height:400px; overflow:auto; border:1px solid #e8eaed; border-radius:8px; }
+.data-preview table { font-size:12px; }
+.log-area { background:#1e1e1e; color:#d4d4d4; font-family:"Cascadia Code",Consolas,monospace; font-size:12px; padding:12px; border-radius:8px; max-height:300px; overflow-y:auto; white-space:pre-wrap; line-height:1.6; }
+.log-entry { padding:2px 0; }
+.log-info { color:#6a9955; }
+.log-warn { color:#ce9178; }
+.log-good { color:#4ec9b0; }
+.config-hint { font-size:11px; color:#999; margin-top:2px; }
+.progress-bar { height:6px; background:#e8eaed; border-radius:3px; margin-top:12px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#1a73e8,#0d47a1); border-radius:3px; transition:width .3s; width:0%; }
+.empty-state { text-align:center; padding:40px 20px; color:#999; }
+.empty-state .icon { font-size:48px; margin-bottom:12px; }
+.tag-list { display:flex; flex-wrap:wrap; gap:4px; }
+.tag { display:inline-flex; align-items:center; gap:4px; background:#e8f0fe; color:#1a73e8; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:500; }
+.tag .remove { cursor:pointer; font-size:14px; opacity:.6; }
+.tag .remove:hover { opacity:1; }
+.info-tip { font-size:12px; color:#888; margin-top:6px; line-height:1.5; }
+.col-selector { display:flex; flex-wrap:wrap; gap:6px; max-height:150px; overflow-y:auto; padding:4px; }
+.col-chip { padding:4px 10px; border:1px solid #ddd; border-radius:16px; font-size:12px; cursor:pointer; transition:all .2s; user-select:none; }
+.col-chip.selected { background:#1a73e8; color:#fff; border-color:#1a73e8; }
+.col-chip:hover:not(.selected) { border-color:#1a73e8; background:#e8f0fe; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧹 DataClean Mini</h1>
+  <p>数据质检与清洗小助手 — 上传 CSV / Excel，自动质检、清洗、导出</p>
+</div>
+
+<div class="container">
+  <!-- Sidebar — config -->
+  <div>
+    <div class="card">
+      <h3><span class="icon">📂</span> 数据加载</h3>
+      <div class="form-group">
+        <label>上传数据文件</label>
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="width:100%;">
+        <div class="info-tip">支持 CSV (.csv) 与 Excel (.xlsx / .xls)</div>
+      </div>
+      <button class="btn btn-primary" id="btnLoad" disabled style="width:100%;justify-content:center;">📥 读取数据</button>
+      <div id="loadStatus" class="info-tip" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="card" id="configCard" style="display:none;">
+      <h3><span class="icon">⚙️</span> 清洗规则配置</h3>
+
+      <div class="form-group">
+        <label>主键字段（可选，用于去重）</label>
+        <select id="primaryKey"><option value="">— 不设置主键 —</option></select>
+      </div>
+
+      <div class="form-group">
+        <label>日期字段（自动标准化格式）</label>
+        <div class="col-selector" id="dateCols"></div>
+      </div>
+
+      <div class="form-group">
+        <label>必填字段（缺失则删除该行）</label>
+        <div class="col-selector" id="requiredCols"></div>
+      </div>
+
+      <div class="form-group">
+        <label>数值字段（异常值检测）</label>
+        <div class="col-selector" id="numericCols"></div>
+      </div>
+
+      <div class="form-group">
+        <label>缺失值填补策略（格式：字段名=填补值）</label>
+        <textarea id="missingStrategy" placeholder="age=median&#10;event_type=unknown&#10;score=0"></textarea>
+        <div class="config-hint">支持: 具体值 / mean / median / mode / drop</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>去重模式</label>
+          <select id="dedupMode">
+            <option value="primary">按主键去重</option>
+            <option value="all">整行去重</option>
+            <option value="none">不去重</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>异常值检测方法</label>
+          <select id="outlierMethod">
+            <option value="iqr">IQR（四分位距）</option>
+            <option value="sigma">3σ 原则</option>
+            <option value="none">不检测</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="button-bar">
+        <button class="btn btn-success" id="btnClean" style="flex:1;justify-content:center;">🚀 执行清洗</button>
+        <button class="btn btn-outline" id="btnReset" style="flex-shrink:0;">↺ 重置</button>
+      </div>
+      <div class="progress-bar" id="progressBar" style="display:none;"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="card" id="exportCard" style="display:none;">
+      <h3><span class="icon">💾</span> 导出结果</h3>
+      <div class="button-bar">
+        <button class="btn btn-success btn-sm" id="btnExportCSV">📄 导出清洗数据 CSV</button>
+        <button class="btn btn-primary btn-sm" id="btnExportReport">📊 导出质量报告 Excel</button>
+        <button class="btn btn-outline btn-sm" id="btnExportLog">📝 导出清洗日志 TXT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main — results -->
+  <div>
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" data-tab="preview">📋 数据预览</div>
+        <div class="tab" data-tab="report">📊 质量报告</div>
+        <div class="tab" data-tab="log">📝 清洗日志</div>
+      </div>
+
+      <div class="tab-panel active" id="panel-preview">
+        <div id="previewStats" class="stats-grid"></div>
+        <div class="data-preview" id="dataPreview">
+          <div class="empty-state"><div class="icon">📂</div><p>请上传数据文件开始</p></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-report">
+        <div id="reportContent">
+          <div class="empty-state"><div class="icon">📊</div><p>执行清洗后将自动生成质量报告</p></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-log">
+        <div class="log-area" id="logArea">
+          <span class="log-info">⏳ 等待数据加载...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== DataClean Mini — Core Logic ====================
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+// State
+let rawData = null;           // parsed rows (array of objects)
+let rawColumns = [];
+let cleanedData = null;
+let cleanedColumns = [];
+let qualityReport = {};
+let cleanLog = [];
+let columnTypes = {};         // detected types per column
+
+// ==================== File Loading ====================
+
+$('#fileInput').addEventListener('change', function(e) {
+  if (this.files.length) {
+    $('#btnLoad').disabled = false;
+    $('#loadStatus').textContent = `已选择: ${this.files[0].name}`;
+  } else {
+    $('#btnLoad').disabled = true;
+    $('#loadStatus').textContent = '';
+  }
+});
+
+$('#btnLoad').addEventListener('click', function() {
+  const file = $('#fileInput').files[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  addLog('info', `📥 开始读取文件: ${file.name}`);
+
+  if (ext === 'csv') {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      encoding: 'UTF-8',
+      complete: function(results) {
+        rawData = results.data.filter(r => Object.values(r).some(v => v !== '' && v !== null && v !== undefined));
+        rawColumns = results.meta.fields || [];
+        onDataLoaded(file.name);
+      },
+      error: function(err) {
+        addLog('warn', `❌ CSV 解析失败: ${err.message}`);
+        alert('CSV 解析失败: ' + err.message);
+      }
+    });
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, {defval:''});
+        rawData = json;
+        rawColumns = json.length ? Object.keys(json[0]) : [];
+        onDataLoaded(file.name);
+      } catch(err) {
+        addLog('warn', `❌ Excel 解析失败: ${err.message}`);
+        alert('Excel 解析失败: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    alert('不支持的文件格式，请上传 CSV 或 Excel 文件');
+  }
+});
+
+function onDataLoaded(fileName) {
+  addLog('good', `✅ 成功读取 ${rawData.length} 行, ${rawColumns.length} 列`);
+  addLog('info', `   列名: ${rawColumns.join(', ')}`);
+
+  detectColumnTypes();
+  showConfig();
+  renderPreview(rawData, rawColumns);
+  updateStats(rawData, '原始');
+}
+
+// ==================== Column Type Detection ====================
+
+function detectColumnTypes() {
+  columnTypes = {};
+  rawColumns.forEach(col => {
+    const sample = rawData.slice(0, 100).map(r => r[col]).filter(v => v !== '' && v !== null && v !== undefined);
+    if (sample.length === 0) { columnTypes[col] = 'unknown'; return; }
+
+    const numCount = sample.filter(v => !isNaN(String(v).trim()) && String(v).trim() !== '').length;
+    const numRatio = numCount / sample.length;
+
+    // Date detection: try common formats
+    const datePatterns = [/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/, /^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/, /^\d{4}年/];
+    const dateCount = sample.filter(v => datePatterns.some(p => p.test(String(v).trim()))).length;
+    const dateRatio = dateCount / sample.length;
+
+    if (dateRatio > 0.7) {
+      columnTypes[col] = 'date';
+    } else if (numRatio > 0.8) {
+      columnTypes[col] = 'numeric';
+    } else {
+      columnTypes[col] = 'string';
+    }
+  });
+}
+
+// ==================== Config UI ====================
+
+function showConfig() {
+  $('#configCard').style.display = 'block';
+  $('#exportCard').style.display = 'none';
+
+  // Populate primary key select
+  const pk = $('#primaryKey');
+  pk.innerHTML = '<option value="">— 不设置主键 —</option>';
+  rawColumns.forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c; pk.appendChild(o); });
+
+  // Column selectors
+  buildColSelector('dateCols', 'date');
+  buildColSelector('requiredCols', null);
+  buildColSelector('numericCols', 'numeric');
+
+  // Default selections based on detected types
+  rawColumns.forEach(c => {
+    if (columnTypes[c] === 'date') {
+      const chip = document.querySelector(`#dateCols .col-chip[data-col="${CSS.escape(c)}"]`);
+      if (chip) chip.classList.add('selected');
+    }
+    if (columnTypes[c] === 'numeric') {
+      const chip = document.querySelector(`#numericCols .col-chip[data-col="${CSS.escape(c)}"]`);
+      if (chip) chip.classList.add('selected');
+    }
+  });
+
+  $('#dedupMode').value = 'primary';
+  $('#outlierMethod').value = 'iqr';
+  $('#missingStrategy').value = '';
+}
+
+function CSSescape(s) { return s.replace(/([!"#$%&'()*+,.\/:;<=>?@[\]^`{|}~])/g, '\\$1'); }
+
+function buildColSelector(containerId, preSelectType) {
+  const container = $('#' + containerId);
+  container.innerHTML = '';
+  rawColumns.forEach(col => {
+    const chip = document.createElement('div');
+    chip.className = 'col-chip';
+    if (preSelectType && columnTypes[col] === preSelectType) chip.classList.add('selected');
+    chip.dataset.col = col;
+    chip.textContent = col;
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+    container.appendChild(chip);
+  });
+}
+
+function getSelectedCols(containerId) {
+  return Array.from($$('#' + containerId + ' .col-chip.selected')).map(c => c.dataset.col);
+}
+
+// ==================== Tab Switching ====================
+
+$$('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    $$('.tab').forEach(t => t.classList.remove('active'));
+    $$('.tab-panel').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    $('#panel-' + this.dataset.tab).classList.add('active');
+  });
+});
+
+// ==================== Cleaning Engine ====================
+
+$('#btnClean').addEventListener('click', async function() {
+  if (!rawData || rawData.length === 0) { alert('请先加载数据'); return; }
+
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = '⏳ 清洗中...';
+  cleanLog = [];
+  qualityReport = {};
+
+  const progressBar = $('#progressBar');
+  const progressFill = $('#progressFill');
+  progressBar.style.display = 'block';
+  progressFill.style.width = '0%';
+
+  // Clone data
+  let df = rawData.map(r => ({...r}));
+  let cols = [...rawColumns];
+
+  qualityReport.raw_rows = df.length;
+  qualityReport.raw_columns = cols.length;
+
+  addLog('info', '');
+  addLog('info', '══════════════════════════════════');
+  addLog('info', '🧹 开始数据清洗流程');
+  addLog('info', `   原始数据: ${df.length} 行 × ${cols.length} 列`);
+  addLog('info', '══════════════════════════════════');
+
+  await sleep(200); progressFill.style.width = '8%';
+
+  // --- Step 1: Trim strings ---
+  addLog('info', '');
+  addLog('info', '[1/7] 🔤 字符串字段去除首尾空格...');
+  let trimmed = 0;
+  cols.forEach(col => {
+    if (columnTypes[col] === 'string' || columnTypes[col] === 'unknown') {
+      df.forEach(row => {
+        if (row[col] !== null && row[col] !== undefined) {
+          const old = String(row[col]);
+          const trimmedVal = old.trim();
+          if (old !== trimmedVal) { trimmed++; row[col] = trimmedVal; }
+        }
+      });
+    }
+  });
+  addLog('good', `   ✅ 完成，共修正 ${trimmed} 处前后空格`);
+  await sleep(150); progressFill.style.width = '18%';
+
+  // --- Step 2: Column existence check ---
+  addLog('info', '');
+  addLog('info', '[2/7] 🔍 字段结构检查...');
+  const requiredCols = getSelectedCols('requiredCols');
+  const dateCols = getSelectedCols('dateCols');
+  const numericCols = getSelectedCols('numericCols');
+  const primaryKey = $('#primaryKey').value;
+
+  const missingRequired = requiredCols.filter(c => !cols.includes(c));
+  if (missingRequired.length) {
+    addLog('warn', `   ⚠️ 配置的必填字段不存在: ${missingRequired.join(', ')}`);
+  } else {
+    addLog('good', '   ✅ 所有必填字段存在');
+  }
+  addLog('info', `   已识别: ${requiredCols.length} 必填字段, ${dateCols.length} 日期字段, ${numericCols.length} 数值字段`);
+  await sleep(150); progressFill.style.width = '28%';
+
+  // --- Step 3: Missing value analysis ---
+  addLog('info', '');
+  addLog('info', '[3/7] 🔎 缺失值统计与处理...');
+  const missingRates = {};
+  cols.forEach(col => {
+    const missing = df.filter(r => r[col] === '' || r[col] === null || r[col] === undefined).length;
+    missingRates[col] = { count: missing, rate: (missing / df.length * 100).toFixed(1) };
+  });
+
+  // Handle required columns — drop rows with missing required fields
+  if (requiredCols.length) {
+    const beforeDrop = df.length;
+    df = df.filter(row => requiredCols.every(c => row[c] !== '' && row[c] !== null && row[c] !== undefined));
+    const dropped = beforeDrop - df.length;
+    qualityReport.required_dropped = dropped;
+    if (dropped > 0) {
+      addLog('warn', `   ⚠️ 因必填字段缺失删除 ${dropped} 行`);
+    } else {
+      addLog('good', '   ✅ 必填字段完整，无删除');
+    }
+  }
+
+  // Apply missing strategy
+  const stratText = $('#missingStrategy').value.trim();
+  const strategies = {};
+  if (stratText) {
+    stratText.split('\n').forEach(line => {
+      const [col, val] = line.split('=').map(s => s.trim());
+      if (col && val) strategies[col] = val;
+    });
+  }
+
+  Object.entries(strategies).forEach(([col, strat]) => {
+    if (!cols.includes(col)) return;
+    const missing = df.filter(r => r[col] === '' || r[col] === null || r[col] === undefined);
+    if (!missing.length) return;
+    let fillValue;
+    const vals = df.map(r => Number(r[col])).filter(v => !isNaN(v));
+
+    if (strat === 'mean' && vals.length) fillValue = vals.reduce((a,b) => a+b, 0) / vals.length;
+    else if (strat === 'median' && vals.length) { vals.sort((a,b)=>a-b); fillValue = vals[Math.floor(vals.length/2)]; }
+    else if (strat === 'mode') {
+      const freq = {};
+      df.forEach(r => { const v = String(r[col]); freq[v] = (freq[v]||0)+1; });
+      fillValue = Object.entries(freq).sort((a,b) => b[1]-a[1])[0]?.[0] || '';
+    } else { fillValue = strat; }
+
+    fillValue = isNaN(Number(fillValue)) ? fillValue : Number(fillValue);
+    df.forEach(r => { if (r[col] === '' || r[col] === null || r[col] === undefined) r[col] = fillValue; });
+    addLog('info', `   填补 [${col}]: ${missing.length} 个缺失 → "${fillValue}"`);
+  });
+
+  qualityReport.missing_rates = missingRates;
+  await sleep(150); progressFill.style.width = '42%';
+
+  // --- Step 4: Duplicate detection ---
+  addLog('info', '');
+  addLog('info', '[4/7] 🔁 重复记录检测与去重...');
+  const dedupMode = $('#dedupMode').value;
+  let dupCount = 0;
+  if (dedupMode === 'primary' && primaryKey) {
+    const seen = new Set();
+    const unique = [];
+    df.forEach(row => {
+      const key = String(row[primaryKey]);
+      if (seen.has(key)) dupCount++;
+      else { seen.add(key); unique.push(row); }
+    });
+    df = unique;
+    addLog('info', `   按主键 [${primaryKey}] 去重: ${dupCount} 条重复记录`);
+  } else if (dedupMode === 'all') {
+    const seen = new Set();
+    const unique = [];
+    df.forEach(row => {
+      const key = JSON.stringify(row);
+      if (seen.has(key)) dupCount++;
+      else { seen.add(key); unique.push(row); }
+    });
+    df = unique;
+    addLog('info', `   整行去重: ${dupCount} 条重复记录`);
+  } else {
+    addLog('info', '   跳过去重（配置为不去重）');
+  }
+  qualityReport.duplicate_count = dupCount;
+  if (dupCount === 0) addLog('good', '   ✅ 未发现重复记录');
+  await sleep(150); progressFill.style.width = '56%';
+
+  // --- Step 5: Format standardization ---
+  addLog('info', '');
+  addLog('info', '[5/7] 📅 字段格式标准化...');
+
+  // Date columns
+  if (dateCols.length) {
+    dateCols.forEach(col => {
+      let converted = 0;
+      df.forEach(row => {
+        const raw = row[col];
+        if (raw === '' || raw === null || raw === undefined) return;
+        try {
+          const d = new Date(raw);
+          if (!isNaN(d.getTime())) {
+            row[col] = d.toISOString().split('T')[0]; // YYYY-MM-DD
+            converted++;
+          }
+        } catch(e) {}
+      });
+      if (converted > 0) addLog('info', `   日期字段 [${col}]: 标准化 ${converted} 条`);
+    });
+  }
+
+  // Category fields — lowercase
+  addLog('info', '   类别字段统一小写...');
+  cols.forEach(col => {
+    if (columnTypes[col] === 'string') {
+      df.forEach(row => {
+        if (row[col] && typeof row[col] === 'string') row[col] = row[col].toLowerCase();
+      });
+    }
+  });
+  await sleep(150); progressFill.style.width = '70%';
+
+  // --- Step 6: Outlier detection ---
+  addLog('info', '');
+  addLog('info', '[6/7] 📈 异常值检测...');
+  const outlierMethod = $('#outlierMethod').value;
+  const outlierInfo = {};
+
+  if (outlierMethod !== 'none' && numericCols.length) {
+    numericCols.forEach(col => {
+      const vals = df.map(r => Number(r[col])).filter(v => !isNaN(v));
+      if (vals.length < 10) return;
+
+      let outliers = [];
+      if (outlierMethod === 'iqr') {
+        vals.sort((a,b) => a-b);
+        const q1 = vals[Math.floor(vals.length * 0.25)];
+        const q3 = vals[Math.floor(vals.length * 0.75)];
+        const iqr = q3 - q1;
+        const lower = q1 - 1.5 * iqr;
+        const upper = q3 + 1.5 * iqr;
+        outliers = vals.filter(v => v < lower || v > upper);
+        outlierInfo[col] = { method:'IQR', lower, upper, count: outliers.length };
+      } else if (outlierMethod === 'sigma') {
+        const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
+        const std = Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-mean,2),0) / vals.length);
+        const lower = mean - 3 * std;
+        const upper = mean + 3 * std;
+        outliers = vals.filter(v => v < lower || v > upper);
+        outlierInfo[col] = { method:'3σ', lower: lower.toFixed(2), upper: upper.toFixed(2), count: outliers.length };
+      }
+
+      if (outliers.length > 0) {
+        addLog('warn', `   [${col}] 检测到 ${outliers.length} 个异常值 (${outlierInfo[col].method}, 范围外)`);
+      } else {
+        addLog('good', `   [${col}] 无异常值`);
+      }
+    });
+  } else {
+    addLog('info', '   跳过异常值检测');
+  }
+  qualityReport.outliers = outlierInfo;
+  await sleep(150); progressFill.style.width = '88%';
+
+  // --- Step 7: Finalize ---
+  addLog('info', '');
+  addLog('info', '[7/7] 📦 生成清洗结果...');
+  cleanedData = df;
+  cleanedColumns = cols;
+
+  qualityReport.cleaned_rows = df.length;
+  qualityReport.cleaned_columns = cols.length;
+  qualityReport.rows_removed = qualityReport.raw_rows - df.length;
+  qualityReport.retention_rate = (df.length / qualityReport.raw_rows * 100).toFixed(1);
+
+  addLog('good', `   ✅ 清洗完成: ${qualityReport.raw_rows} → ${df.length} 行 (保留 ${qualityReport.retention_rate}%)`);
+  addLog('info', '══════════════════════════════════');
+  addLog('info', '🎉 数据清洗流程完成！');
+
+  progressFill.style.width = '100%';
+  await sleep(300);
+  progressBar.style.display = 'none';
+
+  // Render results
+  renderPreview(cleanedData, cleanedColumns, 'cleaned');
+  updateStats(cleanedData, '清洗后');
+  renderReport();
+  $('#exportCard').style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = '🚀 执行清洗';
+
+  // Switch to report tab
+  $$('.tab').forEach(t => t.classList.remove('active'));
+  $$('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="report"]').classList.add('active');
+  $('#panel-report').classList.add('active');
+});
+
+// ==================== Rendering ====================
+
+function renderPreview(data, columns, label) {
+  const container = $('#dataPreview');
+  if (!data || !data.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>无数据</p></div>';
+    return;
+  }
+
+  const displayCols = columns.slice(0, 15);
+  const hiddenCount = columns.length - displayCols.length;
+  const displayRows = data.slice(0, 100);
+
+  let html = '<table><thead><tr><th>#</th>';
+  displayCols.forEach(c => { html += `<th>${escHtml(c)}</th>`; });
+  if (hiddenCount > 0) html += `<th>... +${hiddenCount} 列</th>`;
+  html += '</tr></thead><tbody>';
+  displayRows.forEach((row, i) => {
+    html += `<tr><td>${i+1}</td>`;
+    displayCols.forEach(c => {
+      const v = row[c];
+      const display = v === null || v === undefined ? '<span style="color:#ccc">(空)</span>' : escHtml(String(v)).substring(0, 80);
+      html += `<td title="${escHtml(String(v ?? ''))}">${display}</td>`;
+    });
+    if (hiddenCount > 0) html += '<td></td>';
+    html += '</tr>';
+  });
+  if (data.length > 100) {
+    html += `<tr><td colspan="${displayCols.length + 1 + (hiddenCount>0?1:0)}" style="text-align:center;color:#888;">... 还有 ${data.length - 100} 行未显示</td></tr>`;
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function updateStats(data, label) {
+  const container = $('#previewStats');
+  const totalCells = data.length * rawColumns.length;
+  const missingCells = rawColumns.reduce((sum, c) => sum + data.filter(r => r[c]===''||r[c]===null||r[c]===undefined).length, 0);
+  const missingRate = totalCells ? (missingCells / totalCells * 100).toFixed(1) : '0';
+
+  container.innerHTML = `
+    <div class="stat-item"><div class="stat-value">${data.length.toLocaleString()}</div><div class="stat-label">${label}行数</div></div>
+    <div class="stat-item"><div class="stat-value">${rawColumns.length}</div><div class="stat-label">列数</div></div>
+    <div class="stat-item ${missingRate > 20 ? 'danger' : missingRate > 5 ? 'warn' : 'ok'}"><div class="stat-value">${missingRate}%</div><div class="stat-label">缺失率</div></div>
+  `;
+}
+
+function renderReport() {
+  const qr = qualityReport;
+  const container = $('#reportContent');
+
+  let missingHtml = '<table><thead><tr><th>字段</th><th>缺失数</th><th>缺失率</th><th>等级</th></tr></thead><tbody>';
+  if (qr.missing_rates) {
+    Object.entries(qr.missing_rates).forEach(([col, info]) => {
+      const rate = parseFloat(info.rate);
+      const badge = rate > 20 ? '<span class="badge badge-danger">🔴 高</span>' : rate > 5 ? '<span class="badge badge-warn">🟡 中</span>' : '<span class="badge badge-ok">🟢 低</span>';
+      missingHtml += `<tr><td><strong>${escHtml(col)}</strong></td><td>${info.count}</td><td>${info.rate}%</td><td>${badge}</td></tr>`;
+    });
+  }
+  missingHtml += '</tbody></table>';
+
+  let outlierHtml = '<table><thead><tr><th>字段</th><th>方法</th><th>下限</th><th>上限</th><th>异常数量</th></tr></thead><tbody>';
+  if (qr.outliers && Object.keys(qr.outliers).length) {
+    Object.entries(qr.outliers).forEach(([col, info]) => {
+      outlierHtml += `<tr><td><strong>${escHtml(col)}</strong></td><td>${info.method}</td><td>${info.lower}</td><td>${info.upper}</td><td>${info.count > 0 ? '<span class="badge badge-warn">'+info.count+'</span>' : '<span class="badge badge-ok">0</span>'}</td></tr>`;
+    });
+  } else {
+    outlierHtml += '<tr><td colspan="5" style="text-align:center;color:#888;">无异常值数据</td></tr>';
+  }
+  outlierHtml += '</tbody></table>';
+
+  container.innerHTML = `
+    <h3 style="margin-bottom:16px;">📊 数据质量报告</h3>
+    <div class="stats-grid">
+      <div class="stat-item"><div class="stat-value">${qr.raw_rows?.toLocaleString()}</div><div class="stat-label">原始行数</div></div>
+      <div class="stat-item"><div class="stat-value">${qr.cleaned_rows?.toLocaleString()}</div><div class="stat-label">清洗后行数</div></div>
+      <div class="stat-item ${qr.rows_removed > 0 ? 'warn' : 'ok'}"><div class="stat-value">${qr.rows_removed}</div><div class="stat-label">移除行数</div></div>
+      <div class="stat-item ok"><div class="stat-value">${qr.retention_rate}%</div><div class="stat-label">保留率</div></div>
+      <div class="stat-item ${qr.duplicate_count > 0 ? 'warn' : 'ok'}"><div class="stat-value">${qr.duplicate_count}</div><div class="stat-label">重复记录</div></div>
+    </div>
+
+    <h4 style="margin:16px 0 8px;">🔎 字段缺失率分析</h4>
+    ${missingHtml}
+
+    <h4 style="margin:16px 0 8px;">📈 异常值检测</h4>
+    ${outlierHtml}
+  `;
+}
+
+// ==================== Logging ====================
+
+function addLog(type, msg) {
+  cleanLog.push({type, msg, time: new Date().toISOString()});
+  const logArea = $('#logArea');
+  const cls = type === 'warn' ? 'log-warn' : type === 'good' ? 'log-good' : 'log-info';
+  logArea.innerHTML += `<span class="${cls}">${escHtml(msg)}</span>\n`;
+  logArea.scrollTop = logArea.scrollHeight;
+}
+
+// ==================== Export ====================
+
+$('#btnExportCSV').addEventListener('click', function() {
+  if (!cleanedData || !cleanedData.length) { alert('请先执行清洗'); return; }
+  const csv = Papa.unparse(cleanedData);
+  downloadFile(csv, 'cleaned_data.csv', 'text/csv;charset=utf-8');
+  addLog('good', '💾 已导出 cleaned_data.csv');
+});
+
+$('#btnExportReport').addEventListener('click', function() {
+  if (!qualityReport || !qualityReport.raw_rows) { alert('请先执行清洗'); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Summary sheet
+  const summary = [
+    {指标:'原始行数', 值: qualityReport.raw_rows},
+    {指标:'清洗后行数', 值: qualityReport.cleaned_rows},
+    {指标:'移除行数', 值: qualityReport.rows_removed},
+    {指标:'保留率', 值: qualityReport.retention_rate + '%'},
+    {指标:'重复记录数', 值: qualityReport.duplicate_count},
+  ];
+  const ws1 = XLSX.utils.json_to_sheet(summary);
+  XLSX.utils.book_append_sheet(wb, ws1, '质量摘要');
+
+  // Missing rate sheet
+  if (qualityReport.missing_rates) {
+    const missingData = Object.entries(qualityReport.missing_rates).map(([col, info]) => ({
+      字段: col, 缺失数量: info.count, '缺失率(%)': info.rate
+    }));
+    const ws2 = XLSX.utils.json_to_sheet(missingData);
+    XLSX.utils.book_append_sheet(wb, ws2, '缺失率统计');
+  }
+
+  // Outlier sheet
+  if (qualityReport.outliers && Object.keys(qualityReport.outliers).length) {
+    const outData = Object.entries(qualityReport.outliers).map(([col, info]) => ({
+      字段: col, 方法: info.method, 下限: info.lower, 上限: info.upper, 异常数量: info.count
+    }));
+    const ws3 = XLSX.utils.json_to_sheet(outData);
+    XLSX.utils.book_append_sheet(wb, ws3, '异常值检测');
+  }
+
+  XLSX.writeFile(wb, 'data_quality_report.xlsx');
+  addLog('good', '📊 已导出 data_quality_report.xlsx');
+});
+
+$('#btnExportLog').addEventListener('click', function() {
+  if (!cleanLog.length) { alert('请先执行清洗'); return; }
+  const logText = cleanLog.map(l => `[${l.type.toUpperCase()}] ${l.msg}`).join('\n');
+  const header = `DataClean Mini — 清洗日志\n生成时间: ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
+  downloadFile(header + logText, 'clean_log.txt', 'text/plain;charset=utf-8');
+  addLog('good', '📝 已导出 clean_log.txt');
+});
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob(['﻿' + content], {type: mimeType}); // BOM for Excel compat
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ==================== Reset ====================
+
+$('#btnReset').addEventListener('click', function() {
+  rawData = null;
+  cleanedData = null;
+  qualityReport = {};
+  cleanLog = [];
+  columnTypes = {};
+  $('#configCard').style.display = 'none';
+  $('#exportCard').style.display = 'none';
+  $('#fileInput').value = '';
+  $('#btnLoad').disabled = true;
+  $('#loadStatus').textContent = '';
+  $('#dataPreview').innerHTML = '<div class="empty-state"><div class="icon">📂</div><p>请上传数据文件开始</p></div>';
+  $('#previewStats').innerHTML = '';
+  $('#reportContent').innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>执行清洗后将自动生成质量报告</p></div>';
+  $('#logArea').innerHTML = '<span class="log-info">⏳ 等待数据加载...</span>';
+  $$('.tab').forEach(t => t.classList.remove('active'));
+  $$('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="preview"]').classList.add('active');
+  $('#panel-preview').classList.add('active');
+});
+
+// ==================== Helpers ====================
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+
+</body>
+</html>
